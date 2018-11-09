@@ -1,6 +1,5 @@
 const { initSocket } = require('./src/socket')
 const { startTwitchCrawler } = require('./src/twitchCrawler')
-const { startToornamentCrawler } = require('./src/toornamentCrawler')
 
 process.env.BACKEND_API_URL = process.env.BACKEND_API_URL || 'http://localhost:8080'
 process.env.PORT = process.env.PORT || 8000
@@ -15,5 +14,4 @@ function init () {
     console.log('Wait 5sec before next run')
     setTimeout(init, 5000)
   })
-  startToornamentCrawler()
 }
