@@ -2,16 +2,29 @@ const { log } = require('./utils')
 const fetch = require('node-fetch')
 
 const twitchApiBaseUrl = 'https://api.twitch.tv/helix'
+const twitchAuthApiBaseUrl = 'https://id.twitch.tv/oauth2'
+const token = { access_token: '', expire: 0 }
 
-global.editionStreams = {}
+let editionStreams = {}
 let streamsList = {}
 
 exports.startTwitchCrawler = async function () {
   log('twitch', 'Starting Twitch crawler !')
 
   // Clear variables
-  global.editionStreams = {}
+  editionStreams = {}
   streamsList = {}
+
+  // Get token for twith auth
+  if (token.expire < new Date().getTime() - (3600 * 1000)) {
+    log('twitch', 'Getting a token for twitch!')
+
+    const resToken = await fetch(`${twitchAuthApiBaseUrl}/token?client_id=${process.env.TWITCH_CLIENT_ID}&client_secret=${process.env.TWITCH_CLIENT_SECRET}&grant_type=client_credentials`, { method: 'POST' })
+    const jsonToken = await resToken.json()
+
+    token.access_token = jsonToken.access_token
+    token.expire = new Date().getTime() + (jsonToken.expires_in * 1000)
+  }
 
   // Get editions from backend
   const query = `
@@ -35,9 +48,11 @@ exports.startTwitchCrawler = async function () {
   }
 
   generateStreamsList()
-  await getInfoFromTwitch()
-  populateEditionStreams()
-  dispatchToSocket()
+  if (await getInfoFromTwitch()) {
+    populateEditionStreams()
+    global.editionStreams = JSON.parse(JSON.stringify(editionStreams))
+    dispatchToSocket()
+  }
 }
 
 async function getEditionStreamsList (editionNid, editionTitle) {
@@ -65,7 +80,7 @@ async function getEditionStreamsList (editionNid, editionTitle) {
 
   for (let index in json.data.nodeQuery.nodes) {
     const streamsList = json.data.nodeQuery.nodes[index]
-    global.editionStreams[editionNid] = {}
+    editionStreams[editionNid] = {}
     for (let indexStreamList in streamsList) {
       const streams = streamsList[indexStreamList]
 
@@ -74,15 +89,15 @@ async function getEditionStreamsList (editionNid, editionTitle) {
       for (let indexStreams in streams) {
         const stream = streams[indexStreams].stream
 
-        global.editionStreams[editionNid][stream.id] = { front: stream.front }
+        editionStreams[editionNid][stream.id] = { front: stream.front }
       }
     }
   }
 }
 
 function generateStreamsList () {
-  for (let editionNid in global.editionStreams) {
-    const streams = global.editionStreams[editionNid]
+  for (let editionNid in editionStreams) {
+    const streams = editionStreams[editionNid]
     for (let streamId in streams) {
       streamsList[streamId] = { online: false }
     }
@@ -90,55 +105,50 @@ function generateStreamsList () {
 }
 
 async function getInfoFromTwitch () {
-  let logins = []
-  for (let key in streamsList) {
-    logins.push(key)
-  }
+  for (let streamId in streamsList) {
+    // Get the offline image
+    log('twitch', `Getting user info for ${streamId}`)
+    const resUser = await fetch(`${twitchApiBaseUrl}/users?login=${streamId}`, { headers: { Authorization: `Bearer ${token.access_token}` } })
+    const jsonUser = await resUser.json()
 
-  // Get the offline image
-  const resUser = await fetch(`${twitchApiBaseUrl}/users?login=${logins.join('&login=')}`, { headers: { 'Client-ID': process.env.TWITCH_CLIENT_ID } })
-  const jsonUser = await resUser.json()
-
-  for (let index in jsonUser.data) {
-    const user = jsonUser.data[index]
-    console.log(user)
-    if (streamsList[user.login] === undefined) {
-      log('twitch', `Warning stream ${user.login} is not in streamsList (should not append!!!)`)
-      continue
+    if (jsonUser.error) {
+      log('twitch', `[Error] Fetching user info ${jsonUser.error}`)
+      return false
+    }
+    for (let index in jsonUser.data) {
+      const user = jsonUser.data[index]
+      streamsList[streamId]['offline_image_url'] = user.offline_image_url
+      streamsList[streamId]['display_name'] = user.display_name
+      streamsList[streamId]['id'] = user.id
     }
 
-    streamsList[user.login]['offline_image_url'] = user.offline_image_url
-    streamsList[user.login]['display_name'] = user.display_name
-    streamsList[user.login]['id'] = user.id
-  }
+    // Get the others informations
+    const resStream = await fetch(`${twitchApiBaseUrl}/streams?user_login=${streamId}`, { headers: { Authorization: `Bearer ${token.access_token}` } })
+    const jsonStream = await resStream.json()
 
-  // Get the others informations
-  const resStream = await fetch(`${twitchApiBaseUrl}/streams?user_login=${logins.join('&user_login=')}`, { headers: { 'Client-ID': process.env.TWITCH_CLIENT_ID } })
-  const jsonStream = await resStream.json()
-
-  console.log(jsonStream)
-  for (let index in jsonStream.data) {
-    const stream = jsonStream.data[index]
-    if (streamsList[stream.user_name] === undefined) {
-      log('twitch', `Warning stream ${stream.user_name} is not in streamsList (should not append!!!)`)
-      continue
+    if (jsonStream.error) {
+      log('twitch', `[Error] fetching stream info ${jsonStream.error}`)
+      return false
     }
-
-    streamsList[stream.user_name]['online'] = true
-    streamsList[stream.user_name]['title'] = stream.title
-    streamsList[stream.user_name]['viewer_count'] = stream.viewer_count
+    for (let index in jsonStream.data) {
+      const stream = jsonStream.data[index]
+      streamsList[streamId]['online'] = true
+      streamsList[streamId]['status'] = stream.title
+      streamsList[streamId]['viewer_count'] = stream.viewer_count
+    }
   }
+  return true
 }
 
 function populateEditionStreams () {
-  for (let editionNid in global.editionStreams) {
-    const streams = global.editionStreams[editionNid]
+  for (let editionNid in editionStreams) {
+    const streams = editionStreams[editionNid]
     for (let streamId in streams) {
       if (streamsList[streamId].id) {
-        global.editionStreams[editionNid][streamId] = { ...streamsList[streamId], ...global.editionStreams[editionNid][streamId] }
+        editionStreams[editionNid][streamId] = { ...streamsList[streamId], ...editionStreams[editionNid][streamId] }
       } else {
         log('twitch', `Remove stream ${streamId} from list, twitch doesn't know it`)
-        delete global.editionStreams[editionNid][streamId]
+        delete editionStreams[editionNid][streamId]
       }
     }
   }

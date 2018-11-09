@@ -12,8 +12,8 @@ function init () {
   startTwitchCrawler().catch((err) => {
     console.error(err)
   }).finally(() => {
-    console.log('Wait 20sec before next run')
-    setTimeout(init, 4000)
+    console.log('Wait 5sec before next run')
+    setTimeout(init, 5000)
   })
   startToornamentCrawler()
 }
