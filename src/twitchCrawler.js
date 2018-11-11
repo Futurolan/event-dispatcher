@@ -19,7 +19,7 @@ exports.startTwitchCrawler = async function () {
   if (token.expire < new Date().getTime() - (3600 * 1000)) {
     log('twitch', 'Getting a token for twitch!')
 
-    const resToken = await fetch(`${twitchAuthApiBaseUrl}/token?client_id=${process.env.TWITCH_CLIENT_ID}&client_secret=${process.env.TWITCH_CLIENT_SECRET}&grant_type=client_credentials`, { method: 'POST' })
+    const resToken = await fetch(`${twitchAuthApiBaseUrl}/token?client_id=${process.env.TWITCH_CLIENT_ID}&client_secret=${process.env.TWITCH_CLIENT_SECRET}&grant_type=client_credentials`, { method: 'POST', timeout: 10000 })
     const jsonToken = await resToken.json()
 
     token.access_token = jsonToken.access_token
@@ -39,7 +39,7 @@ exports.startTwitchCrawler = async function () {
     }
   }`
 
-  const res = await fetch(`${process.env.BACKEND_API_URL}/graphql?query=${encodeURI(query)}`)
+  const res = await fetch(`${process.env.BACKEND_API_URL}/graphql?query=${encodeURI(query)}`, { timeout: 10000 })
   const json = await res.json()
 
   for (let index in json.data.nodeQuery.nodes) {
@@ -75,7 +75,7 @@ async function getEditionStreamsList (editionNid, editionTitle) {
     }
   }`
 
-  const res = await fetch(`${process.env.BACKEND_API_URL}/graphql?query=${encodeURI(query)}`)
+  const res = await fetch(`${process.env.BACKEND_API_URL}/graphql?query=${encodeURI(query)}`, { timeout: 10000 })
   const json = await res.json()
 
   for (let index in json.data.nodeQuery.nodes) {
@@ -108,7 +108,7 @@ async function getInfoFromTwitch () {
   for (let streamId in streamsList) {
     // Get the offline image
     log('twitch', `Getting user info for ${streamId}`)
-    const resUser = await fetch(`${twitchApiBaseUrl}/users?login=${streamId}`, { headers: { Authorization: `Bearer ${token.access_token}` } })
+    const resUser = await fetch(`${twitchApiBaseUrl}/users?login=${streamId}`, { headers: { Authorization: `Bearer ${token.access_token}` }, timeout: 10000 })
     const jsonUser = await resUser.json()
 
     if (jsonUser.error) {
@@ -123,7 +123,7 @@ async function getInfoFromTwitch () {
     }
 
     // Get the others informations
-    const resStream = await fetch(`${twitchApiBaseUrl}/streams?user_login=${streamId}`, { headers: { Authorization: `Bearer ${token.access_token}` } })
+    const resStream = await fetch(`${twitchApiBaseUrl}/streams?user_login=${streamId}`, { headers: { Authorization: `Bearer ${token.access_token}` }, timeout: 10000 })
     const jsonStream = await resStream.json()
 
     if (jsonStream.error) {
