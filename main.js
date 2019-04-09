@@ -23,7 +23,7 @@ function initYoutubeCrawler () {
   startYoutubeCrawler().catch((err) => {
     console.error(err)
   }).finally(() => {
-    console.log('Wait 5sec before next run')
+    console.log('Wait 60sec before next run')
     setTimeout(initYoutubeCrawler, 60000)
   })
 }

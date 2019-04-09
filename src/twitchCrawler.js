@@ -131,6 +131,5 @@ async function getInfoFromTwitch () {
 function dispatchToSocket () {
   console.log(`[twitch] Emit twitch streams update`)
   global.twitchStreams = JSON.parse(JSON.stringify(twitchStreams))
-
   global.io.sockets.emit(`twitchStreams`, twitchStreams)
 }
