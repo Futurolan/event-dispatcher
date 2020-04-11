@@ -109,6 +109,8 @@ async function getInfoFromTwitch () {
       twitchStreams[streamId]['offline_image_url'] = user.offline_image_url
       twitchStreams[streamId]['display_name'] = user.display_name
       twitchStreams[streamId]['id'] = user.id
+      // DELETE AFTER TEST
+      twitchStreams[streamId]['online'] = true
     }
 
     // Get the others informations
