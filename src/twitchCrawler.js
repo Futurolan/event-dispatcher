@@ -155,11 +155,12 @@ async function getInfoFromTwitch () {
         }
       }
 
+
       if(hosted){
         console.error(`[twitch] Hosted stream found, getting info`)
 
         // Get the others informations for the host
-        const resStream2 = await fetch(`${twitchApiBaseUrl}/streams?user_login=${twitchStreams[streamId]['id']}`, { headers: { Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
+        const resStream2 = await fetch(`${twitchApiBaseUrl}/streams?user_id=${twitchStreams[streamId]['id']}`, { headers: { Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
         const jsonStream2 = await resStream2.json()
 
         if (jsonStream2.error) {
