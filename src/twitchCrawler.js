@@ -100,17 +100,22 @@ async function getInfoFromTwitch () {
     const resUser = await fetch(`${twitchApiBaseUrl}/users?login=${streamId}`, { headers: { Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
     const jsonUser = await resUser.json()
 
+
     if (jsonUser.error) {
       console.error(`[twitch] Error fetching twitch user info ${jsonUser.error}`)
       continue
     }
+
+    if(jsonUser.data.length === 0){
+      console.error(`[twitch] Cannot found data for user ${streamId}`)
+      continue
+    }
+
     for (let index in jsonUser.data) {
       const user = jsonUser.data[index]
       twitchStreams[streamId]['offline_image_url'] = user.offline_image_url
       twitchStreams[streamId]['display_name'] = user.display_name
       twitchStreams[streamId]['id'] = user.id
-      // DELETE AFTER TEST
-      twitchStreams[streamId]['online'] = true
     }
 
     // Get the others informations
@@ -126,6 +131,49 @@ async function getInfoFromTwitch () {
       twitchStreams[streamId]['online'] = true
       twitchStreams[streamId]['status'] = stream.title
       twitchStreams[streamId]['viewer_count'] = stream.viewer_count
+    }
+
+    // Check if stream is hosted
+    if (twitchStreams[streamId]['online'] === false) {
+      console.error(`[twitch] Stream is offline checking if he has hosted stream`)
+
+      const hostStream = await fetch(`https://tmi.twitch.tv/hosts?include_logins=1&host=${twitchStreams[streamId]['id']}`, {
+        timeout: 10000
+      })
+      const jsonHostStream = await hostStream.json()
+
+      if (jsonHostStream.error) {
+        console.error(`[twitch] Error fetching twitch hosted info ${jsonHostStream.error}`)
+        continue
+      }
+      let hosted = false;
+      for (let index in jsonHostStream.hosts) {
+        const host = jsonHostStream.hosts[index]
+        if(host.target_id) {
+          twitchStreams[streamId]['id'] = host.target_id
+          hosted = true
+        }
+      }
+
+      if(hosted){
+        console.error(`[twitch] Hosted stream found, getting info`)
+
+        // Get the others informations for the host
+        const resStream2 = await fetch(`${twitchApiBaseUrl}/streams?user_login=${twitchStreams[streamId]['id']}`, { headers: { Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
+        const jsonStream2 = await resStream2.json()
+
+        if (jsonStream2.error) {
+          console.error(`[twitch] Error fetching twitch stream host info ${jsonStream2.error}`)
+          continue
+        }
+        for (let index in jsonStream2.data) {
+          const stream = jsonStream2.data[index]
+          twitchStreams[streamId]['online'] = true
+          twitchStreams[streamId]['status'] = stream.title
+          twitchStreams[streamId]['viewer_count'] = stream.viewer_count
+        }
+      }
+
     }
   }
 }
