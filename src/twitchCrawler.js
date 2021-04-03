@@ -137,23 +137,23 @@ async function getInfoFromTwitch () {
     if (twitchStreams[streamId]['online'] === false) {
       console.error(`[twitch] Stream is offline checking if he has hosted stream`)
 
-      const hostStream = await fetch(`https://tmi.twitch.tv/hosts?include_logins=1&host=${twitchStreams[streamId]['id']}`, {
-        timeout: 10000
-      })
-      const jsonHostStream = await hostStream.json()
+      // const hostStream = await fetch(`https://tmi.twitch.tv/hosts?include_logins=1&host=${twitchStreams[streamId]['id']}`, {
+      //   timeout: 10000
+      // })
+      // const jsonHostStream = await hostStream.json()
 
-      if (jsonHostStream.error) {
-        console.error(`[twitch] Error fetching twitch hosted info ${jsonHostStream.error}`)
-        continue
-      }
+      // if (jsonHostStream.error) {
+      //   console.error(`[twitch] Error fetching twitch hosted info ${jsonHostStream.error}`)
+      //   continue
+      // }
       let hosted = false;
-      for (let index in jsonHostStream.hosts) {
-        const host = jsonHostStream.hosts[index]
-        if(host.target_id) {
-          twitchStreams[streamId]['id'] = host.target_id
-          hosted = true
-        }
-      }
+      // for (let index in jsonHostStream.hosts) {
+      //   const host = jsonHostStream.hosts[index]
+      //   if(host.target_id) {
+      //     twitchStreams[streamId]['id'] = host.target_id
+      //     hosted = true
+      //   }
+      // }
 
 
       if(hosted){
