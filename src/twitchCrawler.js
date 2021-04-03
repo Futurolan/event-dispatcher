@@ -97,7 +97,7 @@ async function getInfoFromTwitch () {
   for (let streamId in twitchStreams) {
     // Get the offline image
     console.log(`[twitch] Getting info for twitch ${streamId}`)
-    const resUser = await fetch(`${twitchApiBaseUrl}/users?login=${streamId}`, { headers: { Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
+    const resUser = await fetch(`${twitchApiBaseUrl}/users?login=${streamId}`, { headers: { client-id: `${process.env.TWITCH_CLIENT_ID}`, Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
     const jsonUser = await resUser.json()
 
 
@@ -119,7 +119,7 @@ async function getInfoFromTwitch () {
     }
 
     // Get the others informations
-    const resStream = await fetch(`${twitchApiBaseUrl}/streams?user_login=${streamId}`, { headers: { Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
+    const resStream = await fetch(`${twitchApiBaseUrl}/streams?user_login=${streamId}`, { headers: { client-id: `${process.env.TWITCH_CLIENT_ID}`, Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
     const jsonStream = await resStream.json()
 
     if (jsonStream.error) {
@@ -160,7 +160,7 @@ async function getInfoFromTwitch () {
         console.error(`[twitch] Hosted stream found, getting info`)
 
         // Get the others informations for the host
-        const resStream2 = await fetch(`${twitchApiBaseUrl}/streams?user_id=${twitchStreams[streamId]['id']}`, { headers: { Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
+        const resStream2 = await fetch(`${twitchApiBaseUrl}/streams?user_id=${twitchStreams[streamId]['id']}`, { headers: { client-id: `${process.env.TWITCH_CLIENT_ID}`, Authorization: `Bearer ${twitchToken.access_token}` }, timeout: 10000 })
         const jsonStream2 = await resStream2.json()
 
         if (jsonStream2.error) {
